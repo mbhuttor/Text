@@ -1,4 +1,6 @@
+import random
 import math
+
 class TextModel:    
 
    
@@ -28,6 +30,8 @@ class TextModel:
      def add_string(self, s):  
         """ adds a string of texts
         to the model by augmenting the feature dictionaries defined in the constructor."""
+        
+         #sentence length 
         number = 0
         for letter in s.split():
             number += 1
@@ -161,32 +165,25 @@ class TextModel:
              
              
         
+
 def clean_text(txt):
-    """takes a string of text txt as a parameter and returns a 
-    list containing the words in txt after it has been “cleaned”."""
-    txt = txt.replace('?', '')
-    txt = txt.replace('!', '')
-    txt = txt.replace("'", '') 
-    txt = txt.replace('"', '')
-    txt = txt.replace('-', '')
-    txt = txt.replace('_', '')
-    txt = txt.replace('—', '')
-    txt = txt.replace('[', '')
-    txt = txt.replace(']', '')
-    txt = txt.replace('_', '')
-    txt = txt.replace('/', '')
-    txt = txt.replace('.', '')
-    txt = txt.replace(',', '')
-    txt = txt.replace(':', '')
-    txt = txt.replace(';', '')
-    txt = txt.replace('(', '')
-    txt = txt.replace(')', '')
-    txt = txt.lower()
-    txt = txt.split()
-    return txt
+   """Takes a string and cleans it by making it all lowercase with no punctuation
+   """
+   txt = txt.lower()
+   words = txt.split()
+   cleaned = ''
+   for x in words:
+       for y in x:
+           if y in 'abcdefghijklmnopqrstuvwxyz123456789':
+               cleaned += y
+       cleaned += ' '
+   #gets rid of extra space the line above put in on the last iteration
+   cleaned = cleaned[:-1]
+   txt = cleaned.split()
+   return txt
 
 def stem(s):
-    """hat accepts a string as a parameter. 
+    """that accepts a string as a parameter. 
     The function should then return the stem of s."""
     word_stem = s
     if word_stem[-2:] == 'ed':
