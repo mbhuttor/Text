@@ -14,9 +14,8 @@ class TextModel:
         self.word_lengths= {}
         self.stems= {}
         self.lengths = {}
-        self.sentence_lengths = {}
-        self.last_word = {}
-            
+        self.model = {}
+        
      def __repr__(self):
             """Return a string representation of the TextModel."""
             s = 'text model name: ' + self.name + '\n'
@@ -24,14 +23,19 @@ class TextModel:
             s += '  number of word lengths: ' + str(len(self.word_lengths)) + '\n'
             s += '  number of stems: ' + str(len(self.stems)) + '\n'
             s += '  number of sentence lengths: ' + str(len(self.sentence_lengths)) + '\n'
-            s += '  number of different last word with same punctuation and word: ' + str(len(self.last_word)) + '\n'
+            s += '  number of model lengths: ' + str(len(self.model)) + '\n'
+            
             return s
     
      def add_string(self, s):  
         """ adds a string of texts
         to the model by augmenting the feature dictionaries defined in the constructor."""
         
-         #sentence length 
+        
+        self.model = build_dictionary(s)
+        
+        
+        #sentence length    
         number = 0
         for letter in s.split():
             number += 1
@@ -42,17 +46,8 @@ class TextModel:
                 else:
                     self.sentence_lengths[number] = 1
                     number = 0
-        count = 0
-        for char in s.split():
-            if char[-1] in '.!?':
-                if char in self.last_word:
-                    self.last_word[char] += 1
-                    count = 0
-                else:
-                     self.last_word[char] = 1
-                     count = 0
         
-        
+        #clean
         word_list = clean_text(s)
         
         for w in word_list:
@@ -85,12 +80,15 @@ class TextModel:
         f1 = open((self.name + '-' + 'words'), 'w')
         f1.write(str(self.words))
         f1.close()
+        
         f2 = open((self.name + '-'+ 'word_lengths'), 'w')
         f2.write(str(self.word_lengths))
         f2.close()
+        
         f3 = open((self.name + '_' + 'stems'), 'w')
         f3.write(str(self.stems))
         f3.close()
+        
         f4 = open((self.name + '_' + 'sentence_lengths'), 'w')
         f4.write(str(self.sentence_lengths))
         f4.close()
@@ -98,6 +96,10 @@ class TextModel:
         f5 = open((self.name + '_' + 'last_word'), 'w')
         f5.write(str(self.last_word))
         f5.close()
+        
+        f = open(self.name +'model', 'w')
+        f.write(str(self.model))
+        f.close()
    
      def read_model(self):
         """reads the stored dictionaries for the 
@@ -128,6 +130,11 @@ class TextModel:
         f5.close()
         self.last_word = eval(k_str)
         
+        f = open(self.name +'model', 'r')    # Open for reading.
+        d_str = f.read()           # Read in a string that represents a dict.
+        f.close()
+        self.model = dict(eval(d_str))  # Convert the string to a dictionary.
+        
      def similarity_scores(self, other):
          """that computes and returns a list of log similarity 
          scores measuring the similarity of self and other –
@@ -137,9 +144,25 @@ class TextModel:
          word_lengths_score = compare_dictionaries(other.word_lengths, self.word_lengths)
          stems_score = compare_dictionaries(other.stems, self.stems)
          sentence_lengths_score = compare_dictionaries(other.sentence_lengths, self.sentence_lengths)
-         last_word_score = compare_dictionaries(other.last_word, self.last_word)
-         final_list = [word_score,word_lengths_score,stems_score,sentence_lengths_score, last_word_score]
+         
+         
+         s1 = create_text(other.model, len(other.words))
+         s2 = create_text(self.model, len(self.words))
+         test1 = TextModel('first Model')
+         test2 = TextModel('second  Model')
+         test1.add_string(s1)
+         test2.add_string(s2)
+         
+         model1 = compare_dictionaries(test2.words, test1.words)
+         model2 = compare_dictionaries(test2.word_lengths, test1.word_lengths)
+         model3 = compare_dictionaries(test2.stems, test1.stems)
+         model4 = compare_dictionaries(test2.sentence_lengths, test1.sentence_lengths)
+         
+         score = (model1 + model2 + model3 + model4) / 4
+        
+         final_list = [word_score,word_lengths_score,stems_score,sentence_lengths_score, score]
          return final_list
+     
      def classify(self, source1, source2):
          """ that compares the called TextModel 
          object (self) to two other “source” TextModel 
@@ -163,8 +186,45 @@ class TextModel:
          else:
              print(self.name, 'is more likely to have come from', source2.name)
              
-             
-        
+def build_dictionary(text):
+    """takes string, which is the name of the file, and splits it into key-value pairs. 
+    """
+    #creates an array
+    words = text.split()
+    
+    #creates a dictionary
+    result = {}
+    currentWord = '*'
+    
+    for nextWord in words:
+        if currentWord not in result:
+            result[currentWord] = [nextWord]
+        else:
+            result[currentWord] += [nextWord]
+        lastletter = nextWord[len(nextWord)-1]
+        if lastletter in '!?.':
+            currentWord = '*'
+        else:
+            currentWord = nextWord
+    return result
+
+def create_text(words_dict, number_words):
+    """creates text length of num_words
+    takes in the dictionary containing the words
+    Iand return the desired length of the ouput
+    """
+    answer = ''
+    currentWord = '*'
+    for x in range(number_words):
+        wordPrint = random.choice(words_dict[currentWord])
+        answer += wordPrint + ' '
+        lastletter = wordPrint[len(wordPrint)-1]
+        if lastletter in '!?.':
+            currentWord = '*'
+        else:
+            currentWord = wordPrint
+    
+    return answer
 
 def clean_text(txt):
    """Takes a string and cleans it by making it all lowercase with no punctuation
@@ -181,6 +241,7 @@ def clean_text(txt):
    cleaned = cleaned[:-1]
    txt = cleaned.split()
    return txt
+
 
 def stem(s):
     """that accepts a string as a parameter. 
@@ -219,16 +280,21 @@ def compare_dictionaries(d1,d2):
     """It should take two feature 
     dictionaries d1 and d2 as inputs, 
     and it should compute and return their log similarity score"""
+    if d1 == {}:
+        return -50
     score = 0
-    total = 0
-    for c in d1:
-        total += d1[c]
+    total = sum(d1.values())
+    temp_score = 0
     for c in d2:
         if c in d1:
-            score += d2[c] * math.log(d1[c] / total)
+            temp_score = d1[c] / total
+            temp_score = d2[c] * math.log(temp_score)
+            score += temp_score
+            temp_score = 0
         else:
-            score += d2[c] * math.log(0.5/total)
-            
+            temp_score = d2[c] * math.log(0.5/total)
+            score += temp_score
+            temp_score = 0
     return score 
 
 def test():
@@ -268,4 +334,5 @@ def run_tests():
     new4.add_file('New girl.txt')
     new4.classify(source1, source2) 
     
+
     
